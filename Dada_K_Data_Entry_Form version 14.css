@@ -9,6 +9,36 @@ function doGet() {
 }
 
 /**
+ * FIX FOR GITHUB ROLLING: Intercepts POST requests from external websites (like GitHub Pages),
+ * parses the data, runs your main logic, and returns a successful response to stop the loading spinner.
+ */
+function doPost(e) {
+  try {
+    let rawData;
+    
+    // Parse the incoming data depending on how your frontend script packages it
+    if (e.postData.type === "application/json") {
+      rawData = JSON.parse(e.postData.contents);
+    } else {
+      rawData = e.parameter;
+    }
+    
+    // Execute your exact processForm logic using the parsed data
+    const result = processForm(rawData);
+    
+    // Send a clean success response back to GitHub Pages to kill the infinite loop
+    return ContentService
+          .createTextOutput(JSON.stringify({ "result": "success", "message": result }))
+          .setMimeType(ContentService.MimeType.JSON);
+          
+  } catch (err) {
+    return ContentService
+          .createTextOutput(JSON.stringify({ "result": "error", "error": err.toString() }))
+          .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+/**
  * Processes the form: Updates existing rows or appends new ones.
  */
 function processForm(formData) {
@@ -18,7 +48,13 @@ function processForm(formData) {
     const data = sheet.getDataRange().getValues();
     
     const recipientName = "Jonathan Kunfiri";
-    const userEmail = Session.getActiveUser().getEmail();
+    
+    // FIX: Fallback to a placeholder if an external GitHub submission cannot read the Google Session active email
+    let userEmail = Session.getActiveUser().getEmail();
+    if (!userEmail || userEmail === "") {
+      userEmail = formData['Email'] || formData['email'] || "Form Submission";
+    }
+    
     const uniqueId = formData.uniqueId;
     
     let rowIndex = -1;
@@ -82,11 +118,14 @@ function generateAndEmailPDF(data, email, name) {
   doc.saveAndClose();
   const pdf = doc.getAs(MimeType.PDF);
   
-  MailApp.sendEmail({
-    to: email, 
-    subject: "Confirmed: Entry for " + data['Last Name'],
-    body: "The record has been processed successfully.",
-    attachments: [pdf]
-  });
+  // Safety check: Only attempt to email if we captured a valid email address string
+  if (email && email.indexOf("@") !== -1) {
+    MailApp.sendEmail({
+      to: email, 
+      subject: "Confirmed: Entry for " + data['Last Name'],
+      body: "The record has been processed successfully.",
+      attachments: [pdf]
+    });
+  }
   DriveApp.getFileById(doc.getId()).setTrashed(true);
 }
