@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #10b981;
+      --primary-dark: #059669;
+      --bg: #f3f4f6;
+      --text-main: #1f2937;
+      --text-muted: #6b7280;
+      --white: #ffffff;
+      --border: #e5e7eb;
+    }
+    
+    body { 
+      /* Uses your campus picture as a fixed, cover background */
+      background-image: linear-gradient(rgba(15, 23, 42, 0.4), rgba(15, 23, 42, 0.4)), url('https://images.squarespace-cdn.com/content/v1/67651c5eb5149377464294ca/e5935f8c-c68e-4da5-b547-5ccdf72f7743/20241206_065755%280%29.jpg');
+      background-size: cover;
+      background-position: center;
+      background-attachment: fixed;
+      font-family: 'Inter', sans-serif; 
+      display: flex; 
+      justify-content: center; 
+      align-items: center; 
+      min-height: 100vh; 
+      margin: 0; 
+      padding: 20px; 
+      color: var(--text-main);
+    }
+
+    .container { 
+      background: rgba(255, 255, 255, 0.92); /* Slightly translucent white */
+      backdrop-filter: blur(12px); /* Glassmorphism look */
+      -webkit-backdrop-filter: blur(12px);
+      padding: 35px 40px 40px 40px; 
+      border-radius: 24px; 
+      box-shadow: 0 20px 25px rgba(0,0,0,0.15); 
+      width: 100%;
+      max-width: 450px; 
+      box-sizing: border-box;
+    }
+
+    /* Logo Styling */
+    .logo-container {
+      text-align: center;
+      margin-bottom: 15px;
+    }
+    .logo-icon {
+      height: 65px;
+      width: auto;
+      object-fit: contain;
+    }
+
+    h2 { font-weight: 700; text-align: center; margin-top: 0; margin-bottom: 30px; letter-spacing: -0.025em; }
+    .input-group { margin-bottom: 20px; }
+    label { display: block; font-size: 0.875rem; font-weight: 600; margin-bottom: 8px; }
+    input { width: 100%; padding: 12px 16px; border: 1px solid var(--border); border-radius: 12px; box-sizing: border-box; font-size: 0.95rem; transition: all 0.2s; background: #fafafa; }
+    input:focus { outline: none; border-color: var(--primary); background: var(--white); box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1); }
+    
+    .btn { width: 100%; padding: 14px; border: none; border-radius: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s; display: flex; justify-content: center; align-items: center; gap: 8px; font-size: 1rem; }
+    .btn-save { background-color: var(--primary); color: white; margin-top: 10px; }
+    .btn-save:hover { background-color: var(--primary-dark); transform: translateY(-1px); }
+    .btn-outline { border: 1px solid var(--border); background: var(--white); color: var(--text-main); margin-top: 12px; }
+    .btn-exit { background-color: #374151; color: white; margin-top: 12px; }
+    .btn-exit:hover { background-color: #1f2937; }
+    
+    #modalOverlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(17, 24, 39, 0.7); backdrop-filter: blur(8px); justify-content: center; align-items: center; z-index: 1000; }
+    .modal { background: var(--white); padding: 32px; border-radius: 24px; width: 90%; max-width: 400px; text-align: center; }
+    .review-item { padding: 12px 0; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; font-size: 0.9rem; }
+    .spinner { border: 2px solid rgba(255, 255, 255, 0.3); border-top: 2px solid white; border-radius: 50%; width: 18px; height: 18px; animation: spin 0.8s linear infinite; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+
+<div class="container" id="formCard">
+  <div class="logo-container">
+    <img src="https://ghs.gov.gh/assets/ghs-official.png" alt="GHS Logo" class="logo-icon">
+  </div>
+  <h2>Staff Data Entry</h2>
+  
+  <form id="empForm">
+    <input type="hidden" name="uniqueId" id="uniqueId">
+    <div class="input-group"><label>First Name</label><input type="text" name="First Name" required placeholder="Dada"></div>
+    <div class="input-group"><label>Last Name</label><input type="text" name="Last Name" required placeholder="K"></div>
+    <div class="input-group"><label>Place of Work</label><input type="text" name="Place of Work" required placeholder="Wa Municipal Hospital"></div>
+    <div class="input-group"><label>Cadre</label><input type="text" name="Cadre" required placeholder="e.g. Nurse"></div>
+    <div class="input-group"><label>Date Employed</label><input type="date" id="dateEmployed" name="Date Employed" required></div>
+    <button type="button" class="btn btn-save" onclick="openReview()">Preview To Save</button>
+  </form>
+</div>
+
+<div id="modalOverlay">
+  <div class="modal">
+    <h3>Confirm Entry</h3>
+    <div id="reviewSummary" style="text-align:left; margin-bottom:24px;"></div>
+    <button class="btn btn-save" id="finalSubmit" onclick="submitEntry()">
+      <span id="btnText">Confirm Submission</span>
+      <div id="loadStatus" style="display:none;" class="spinner"></div>
+    </button>
+    <button class="btn btn-outline" style="border:none;" onclick="closeReview()">Go back</button>
+  </div>
+</div>
+
+<div class="container" id="successCard" style="display:none; text-align:center;">
+  <div style="font-size: 48px; color: var(--primary);">✓</div>
+  <h2>Entry Successful</h2>
+  <p style="color: var(--text-muted); margin-bottom: 30px;">
+    Record for <strong id="successName"></strong> updated and emailed to <strong>Jonathan Kunfiri</strong>.
+  </p>
+  <button class="btn btn-save" onclick="addNewRefresh()">Add New Employee</button>
+  <button class="btn btn-outline" onclick="backToEdit()">Make a Correction</button>
+  <button class="btn btn-exit" onclick="exitForm()">Exit</button>
+</div>
+
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    document.getElementById('uniqueId').value = "ID-" + Date.now();
+    document.getElementById('dateEmployed').max = new Date().toISOString().split("T")[0];
+  });
+
+  function openReview() {
+    const form = document.getElementById('empForm');
+    if(!form.checkValidity()) { form.reportValidity(); return; }
+    let summary = "";
+    new FormData(form).forEach((v, k) => { if(k !== 'uniqueId') summary += `<div class="review-item"><span>${k}</span><strong>${v}</strong></div>`; });
+    document.getElementById('reviewSummary').innerHTML = summary;
+    document.getElementById('modalOverlay').style.display = 'flex';
+  }
+
+  function closeReview() { document.getElementById('modalOverlay').style.display = 'none'; }
+  function backToEdit() { document.getElementById('successCard').style.display = 'none'; document.getElementById('formCard').style.display = 'block'; }
+  function addNewRefresh() { location.reload(); }
+  function exitForm() { window.top.location.href = "https://www.google.com"; }
+
+  function submitEntry() {
+    const form = document.getElementById('empForm');
+    const name = form.querySelector('[name="First Name"]').value + " " + form.querySelector('[name="Last Name"]').value;
+    document.getElementById('btnText').style.display = 'none';
+    document.getElementById('loadStatus').style.display = 'block';
+    
+    google.script.run.withSuccessHandler(() => {
+      document.getElementById('successName').innerText = name;
+      document.getElementById('modalOverlay').style.display = 'none';
+      document.getElementById('formCard').style.display = 'none';
+      document.getElementById('successCard').style.display = 'block';
+    }).processForm(form);
+  }
+</script>
+</body>
+</html>

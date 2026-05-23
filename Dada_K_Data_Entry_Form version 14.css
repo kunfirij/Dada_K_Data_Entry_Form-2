@@ -1,0 +1,92 @@
+/**
+ * Serves the HTML form with mobile-responsive settings.
+ */
+function doGet() {
+  return HtmlService.createHtmlOutputFromFile('Index')
+      .setTitle('Employee Data Entry')
+      .addMetaTag('viewport', 'width=device-width, initial-scale=1')
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+}
+
+/**
+ * Processes the form: Updates existing rows or appends new ones.
+ */
+function processForm(formData) {
+  try {
+    const ss = SpreadsheetApp.openById("1Yjd96ADfhxKLZF8r_jgjKyIJI41FSJz4knEn_GG_Dh4");
+    const sheet = ss.getSheetByName("Data");
+    const data = sheet.getDataRange().getValues();
+    
+    const recipientName = "Jonathan Kunfiri";
+    const userEmail = Session.getActiveUser().getEmail();
+    const uniqueId = formData.uniqueId;
+    
+    let rowIndex = -1;
+
+    // Search for existing ID in Column G (Index 6) to handle corrections
+    for (let i = 1; i < data.length; i++) {
+      if (data[i][6] == uniqueId) {
+        rowIndex = i + 1;
+        break;
+      }
+    }
+
+    const rowData = [
+      formData['First Name'], 
+      formData['Last Name'], 
+      formData['Place of Work'], 
+      formData['Cadre'], 
+      formData['Date Employed'],
+      userEmail,
+      uniqueId
+    ];
+
+    if (rowIndex > 0) {
+      sheet.getRange(rowIndex, 1, 1, 7).setValues([rowData]);
+    } else {
+      sheet.appendRow(rowData);
+      applyProfessionalFormatting(sheet, sheet.getLastRow());
+    }
+
+    generateAndEmailPDF(formData, userEmail, recipientName);
+
+    return "OK";
+  } catch (e) {
+    return "Error: " + e.toString();
+  }
+}
+
+function applyProfessionalFormatting(sheet, row) {
+  const range = sheet.getRange(row, 1, 1, 7);
+  range.setBorder(true, true, true, true, true, true)
+       .setFontFamily("Arial")
+       .setVerticalAlignment("middle");
+  if (row % 2 == 0) range.setBackground("#f9f9f9");
+}
+
+function generateAndEmailPDF(data, email, name) {
+  const doc = DocumentApp.create('Onboarding_' + data['Last Name']);
+  const body = doc.getBody();
+  body.appendParagraph("STAFF ONBOARDING SUMMARY").setHeading(DocumentApp.ParagraphHeading.HEADING1).setAlignment(DocumentApp.HorizontalAlignment.CENTER);
+  
+  const details = [
+    ["First Name:", data['First Name']],
+    ["Last Name:", data['Last Name']],
+    ["Place of Work:", data['Place of Work']],
+    ["Cadre:", data['Cadre']],
+    ["Date Employed:", data['Date Employed']],
+    ["Processed for:", name]
+  ];
+  
+  body.appendTable(details).setBorderWidth(0);
+  doc.saveAndClose();
+  const pdf = doc.getAs(MimeType.PDF);
+  
+  MailApp.sendEmail({
+    to: email, 
+    subject: "Confirmed: Entry for " + data['Last Name'],
+    body: "The record has been processed successfully.",
+    attachments: [pdf]
+  });
+  DriveApp.getFileById(doc.getId()).setTrashed(true);
+}
