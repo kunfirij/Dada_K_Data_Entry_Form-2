@@ -150,5 +150,47 @@
     }).processForm(form);
   }
 </script>
+  <script>
+      // Paste your URL inside the quotes below!
+      const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw9hSJyh6L8bQchAFPzj8pfIOxZU-fznFxGwyqLJp0QPNvtwbbaMof2QzDCMxBdTm9K/exec";
+
+      const form = document.querySelector('form');
+
+      form.addEventListener('submit', e => {
+        e.preventDefault(); 
+        
+        const submitButton = form.querySelector('[type="submit"]');
+        const originalButtonText = submitButton ? submitButton.innerText : "Submit";
+        
+        if (submitButton) {
+          submitButton.innerText = "Processing... Please wait";
+          submitButton.disabled = true;
+        }
+
+        const formData = new FormData(form);
+
+        fetch(SCRIPT_URL, { 
+          method: 'POST', 
+          body: formData,
+          mode: 'no-cors' 
+        })
+        .then(response => {
+          alert("Success! Your entry has been recorded and your onboarding PDF is being emailed.");
+          form.reset();
+          if (submitButton) {
+            submitButton.innerText = originalButtonText;
+            submitButton.disabled = false;
+          }
+        })
+        .catch(error => {
+          console.error('Submission Error:', error);
+          alert("An error occurred while processing your request. Please check your internet and try again.");
+          if (submitButton) {
+            submitButton.innerText = originalButtonText;
+            submitButton.disabled = false;
+          }
+        });
+      });
+    </script>
 </body>
 </html>
